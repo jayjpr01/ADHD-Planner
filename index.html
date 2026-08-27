@@ -63,6 +63,12 @@
   .eyebrow .count-pill{
     background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:1px 8px;font-size:0.72rem;color:var(--ink);
   }
+  .eyebrow.panel-toggle{cursor:pointer;user-select:none;margin-bottom:0;}
+  .eyebrow-title{display:flex;align-items:center;gap:6px;}
+  .collapse-chevron{display:inline-block;font-size:0.65rem;transition:transform 0.15s ease;flex-shrink:0;}
+  .collapse-chevron.collapsed{transform:rotate(-90deg);}
+  .panel-body{margin-top:12px;}
+  .panel-body.collapsed{display:none;}
 
   form.add-task{display:flex;flex-direction:column;gap:8px;}
   .field-row{display:flex;gap:8px;}
@@ -258,21 +264,29 @@
     <div class="left-col">
 
       <div class="panel" id="syncPanel">
-        <div class="eyebrow"><span>Sync Across Devices</span><span class="count-pill" id="syncStatusPill">Not connected</span></div>
-        <div style="display:flex;flex-direction:column;gap:8px;">
-          <input type="password" id="syncTokenInput" placeholder="GitHub token (gist scope only)">
-          <input type="text" id="syncGistIdInput" placeholder="Gist ID (leave blank to create new)">
-          <div class="inline-form-actions">
-            <button type="button" class="btn btn-sm" id="saveSyncSettings">Save &amp; Connect</button>
-            <button type="button" class="btn btn-sm btn-outline" id="createNewGistBtn">Create New Gist</button>
-            <button type="button" class="btn btn-sm btn-outline" id="syncNowBtn">Sync Now</button>
+        <div class="eyebrow panel-toggle" data-action="toggle-panel" data-panel="sync">
+          <span class="eyebrow-title"><span class="collapse-chevron">&#9662;</span>Sync Across Devices</span>
+          <span class="count-pill" id="syncStatusPill">Not connected</span>
+        </div>
+        <div class="panel-body" id="panelBody-sync">
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <input type="password" id="syncTokenInput" placeholder="GitHub token (gist scope only)">
+            <input type="text" id="syncGistIdInput" placeholder="Gist ID (leave blank to create new)">
+            <div class="inline-form-actions">
+              <button type="button" class="btn btn-sm" id="saveSyncSettings">Save &amp; Connect</button>
+              <button type="button" class="btn btn-sm btn-outline" id="createNewGistBtn">Create New Gist</button>
+              <button type="button" class="btn btn-sm btn-outline" id="syncNowBtn">Sync Now</button>
+            </div>
+            <div class="empty-state" style="padding:0;">On your first Mac: paste your token, click "Create New Gist," then copy the Gist ID it fills in. On your second Mac: paste the same token and that Gist ID, then click "Save &amp; Connect."</div>
           </div>
-          <div class="empty-state" style="padding:0;">On your first Mac: paste your token, click "Create New Gist," then copy the Gist ID it fills in. On your second Mac: paste the same token and that Gist ID, then click "Save &amp; Connect."</div>
         </div>
       </div>
 
       <div class="panel">
-        <div class="eyebrow"><span>Add a Task</span></div>
+        <div class="eyebrow panel-toggle" data-action="toggle-panel" data-panel="addtask">
+          <span class="eyebrow-title"><span class="collapse-chevron">&#9662;</span>Add a Task</span>
+        </div>
+        <div class="panel-body" id="panelBody-addtask">
         <form class="add-task" id="addTaskForm">
           <input type="text" id="newTaskText" placeholder="What needs to get done?" maxlength="200">
           <div class="field-row">
@@ -324,16 +338,27 @@
           <div class="eyebrow"><span>Recurring Tasks</span></div>
           <div id="manageRecurringList"></div>
         </div>
+        </div>
       </div>
 
       <div class="panel pending-panel">
-        <div class="eyebrow"><span>Pending from Previous Day</span><span class="count-pill" id="pendingCount">0</span></div>
-        <div id="pendingList"></div>
+        <div class="eyebrow panel-toggle" data-action="toggle-panel" data-panel="pending">
+          <span class="eyebrow-title"><span class="collapse-chevron">&#9662;</span>Pending from Previous Day</span>
+          <span class="count-pill" id="pendingCount">0</span>
+        </div>
+        <div class="panel-body" id="panelBody-pending">
+          <div id="pendingList"></div>
+        </div>
       </div>
 
       <div class="panel">
-        <div class="eyebrow"><span>Unscheduled Tasks</span><span class="count-pill" id="backlogCount">0</span></div>
-        <div id="backlogList"></div>
+        <div class="eyebrow panel-toggle" data-action="toggle-panel" data-panel="backlog">
+          <span class="eyebrow-title"><span class="collapse-chevron">&#9662;</span>Unscheduled Tasks</span>
+          <span class="count-pill" id="backlogCount">0</span>
+        </div>
+        <div class="panel-body" id="panelBody-backlog">
+          <div id="backlogList"></div>
+        </div>
       </div>
 
     </div>
@@ -433,6 +458,8 @@
   var SYNC_TOKEN_KEY = "planner-sync-token";
   var SYNC_GIST_KEY = "planner-sync-gist-id";
   var SYNC_FILE_NAME = "planner-data.json";
+  var INBOX_FILE_NAME = "inbox.txt";
+  var inboxNeedsClear = false;
   var syncToken = "";
   var syncGistId = "";
   var syncStatus = "idle";
@@ -440,6 +467,29 @@
   var lastSyncedAt = null;
   var pushDebounceTimer = null;
   var syncPollInterval = null;
+  var PANEL_COLLAPSE_KEY = "planner-panel-collapse";
+  var panelCollapse = {};
+
+  function loadPanelCollapse(){
+    if (!hasStorage) return;
+    try{
+      var raw = window.localStorage.getItem(PANEL_COLLAPSE_KEY);
+      if (raw) panelCollapse = JSON.parse(raw) || {};
+    }catch(e){ panelCollapse = {}; }
+  }
+  function savePanelCollapse(){
+    if (!hasStorage) return;
+    try{ window.localStorage.setItem(PANEL_COLLAPSE_KEY, JSON.stringify(panelCollapse)); }catch(e){}
+  }
+  function applyPanelCollapseState(){
+    ["sync","addtask","pending","backlog"].forEach(function(key){
+      var collapsed = !!panelCollapse[key];
+      var body = document.getElementById("panelBody-" + key);
+      var header = document.querySelector('[data-panel="' + key + '"] .collapse-chevron');
+      if (body) body.classList.toggle("collapsed", collapsed);
+      if (header) header.classList.toggle("collapsed", collapsed);
+    });
+  }
 
   var SWATCHES = ['#3F9463','#C64B5A','#2E9E8F','#B4508F','#C99A2E','#5B6470','#3E7CB1','#E0714B'];
 
@@ -594,14 +644,40 @@
     renderSyncStatus();
   }
 
+  function processInboxFile(json){
+    var inboxFile = json.files && json.files[INBOX_FILE_NAME];
+    if (!inboxFile || !inboxFile.content || !inboxFile.content.trim()) return false;
+    var lines = inboxFile.content.split("\n").map(function(l){ return l.trim(); }).filter(Boolean);
+    if (!lines.length) return false;
+    lines.forEach(function(line){
+      var parts = line.split("::");
+      var text = (parts[0] || "").trim();
+      var priority = (parts[1] || "none").trim().toLowerCase();
+      if (["none","low","high"].indexOf(priority) === -1) priority = "none";
+      if (!text) return;
+      var id = uid();
+      data.tasks[id] = {
+        id:id, text:text, priority:priority, completed:false, blockId:null, date:null,
+        pending:false, rolledFrom:null, labelId:null, tagId:null, createdAt: Date.now()
+      };
+    });
+    inboxNeedsClear = true;
+    return true;
+  }
+
   function pushToGist(){
     if (!syncToken || !syncGistId) return Promise.resolve();
     setSyncStatus("syncing");
     var body = {};
     body.files = {};
     body.files[SYNC_FILE_NAME] = { content: JSON.stringify(data) };
+    if (inboxNeedsClear){
+      body.files[INBOX_FILE_NAME] = { content: "" };
+      inboxNeedsClear = false;
+    }
     return fetch("https://api.github.com/gists/" + syncGistId, {
       method: "PATCH",
+      keepalive: true,
       headers: {
         "Authorization": "token " + syncToken,
         "Accept": "application/vnd.github+json",
@@ -631,16 +707,22 @@
       return res.json();
     }).then(function(json){
       var file = json.files && json.files[SYNC_FILE_NAME];
-      if (!file || !file.content){ setSyncStatus("synced"); return; }
-      var remote = JSON.parse(file.content);
-      var shouldAdopt = forceAdopt || (remote.updatedAt && (!data.updatedAt || remote.updatedAt > data.updatedAt));
-      if (shouldAdopt){
-        data = remote;
-        if (hasStorage){
-          try{ window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }catch(e){}
+      if (file && file.content){
+        var remote = JSON.parse(file.content);
+        var shouldAdopt = forceAdopt || (remote.updatedAt && (!data.updatedAt || remote.updatedAt > data.updatedAt));
+        if (shouldAdopt){
+          data = remote;
+          if (hasStorage){
+            try{ window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }catch(e){}
+          }
+          editingTaskId = null;
+          colorPickerOpenFor = null;
+          render();
         }
-        editingTaskId = null;
-        colorPickerOpenFor = null;
+      }
+      var gotInboxItems = processInboxFile(json);
+      if (gotInboxItems){
+        saveData();
         render();
       }
       setSyncStatus("synced");
@@ -657,6 +739,7 @@
     setSyncStatus("syncing");
     var body = { description: "Time Block Planner sync data", "public": false, files: {} };
     body.files[SYNC_FILE_NAME] = { content: JSON.stringify(data) };
+    body.files[INBOX_FILE_NAME] = { content: "" };
     fetch("https://api.github.com/gists", {
       method: "POST",
       headers: {
@@ -1408,6 +1491,12 @@
   document.getElementById("syncNowBtn").addEventListener("click", function(){
     pullFromGist().then(function(){ pushToGist(); });
   });
+  window.addEventListener("pagehide", function(){
+    if (pushDebounceTimer){
+      clearTimeout(pushDebounceTimer);
+      pushToGist();
+    }
+  });
 
   document.getElementById("resetAll").addEventListener("click", function(){
     if (!confirm("This deletes every task, time block, and recurring task permanently. Labels and tags reset to the defaults. Continue?")) return;
@@ -1481,6 +1570,14 @@
       if (action === "next-week"){ weekAnchor = addDaysToDate(weekAnchor, 7); render(); return; }
       if (action === "this-week"){ weekAnchor = todayStr(); render(); return; }
       if (action === "set-view"){ currentView = btn.getAttribute("data-view"); render(); return; }
+
+      if (action === "toggle-panel"){
+        var pkey = btn.getAttribute("data-panel");
+        panelCollapse[pkey] = !panelCollapse[pkey];
+        savePanelCollapse();
+        applyPanelCollapseState();
+        return;
+      }
 
       if (action === "toggle-repeat-day"){
         var rd = parseInt(btn.getAttribute("data-day"), 10);
@@ -1686,8 +1783,10 @@
   (function init(){
     loadData();
     loadSyncSettings();
+    loadPanelCollapse();
     document.getElementById('syncTokenInput').value = syncToken;
     document.getElementById('syncGistIdInput').value = syncGistId;
+    applyPanelCollapseState();
 
     function afterPull(){
       runRollover();
