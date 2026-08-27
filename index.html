@@ -1169,7 +1169,16 @@
     if (blocksToday.some(function(b){ return b.id === currentVal; })) blockSelect.value = currentVal;
 
     var dayUnscheduled = Object.keys(data.tasks).map(function(id){ return data.tasks[id]; })
-      .filter(function(t){ return t.date === viewingDate && !t.blockId && !t.pending; });
+      .filter(function(t){ return t.date === viewingDate && !t.blockId && !t.pending; })
+      .sort(function(a,b){
+        var la = (a.labelId && data.labels[a.labelId]) ? data.labels[a.labelId].name : "";
+        var lb = (b.labelId && data.labels[b.labelId]) ? data.labels[b.labelId].name : "";
+        if (!la && lb) return 1;
+        if (la && !lb) return -1;
+        if (la < lb) return -1;
+        if (la > lb) return 1;
+        return (a.createdAt||0) - (b.createdAt||0);
+      });
     document.getElementById('dayUnschedCount').textContent = dayUnscheduled.length;
     document.getElementById('dayUnscheduledList').innerHTML = dayUnscheduled.length
       ? dayUnscheduled.map(function(t){ return renderTaskRow(t, { showAssign:true }); }).join("")
