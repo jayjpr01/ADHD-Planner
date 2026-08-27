@@ -1,0 +1,1714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Time Block Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F6F7F9;
+    --surface:#FFFFFF;
+    --ink:#444348;
+    --muted:#767A82;
+    --border:#E2E5EA;
+    --blue:#4291AF;
+    --blue-tint:#E9F3F6;
+    --orange:#FF8F33;
+    --orange-tint:#FFF1E4;
+    --amber:#B9791F;
+    --amber-tint:#FBF1E0;
+    --green:#3F9463;
+    --green-tint:#EAF6EF;
+    --danger:#C64B5A;
+    --danger-tint:#FBEBED;
+    --radius:10px;
+    --shadow:0 1px 2px rgba(52,51,58,0.06), 0 4px 14px rgba(52,51,58,0.05);
+    font-family:'Lato', -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);}
+  body{min-height:100vh;}
+  h1,h2,h3{margin:0;font-family:'Lato', sans-serif;}
+  button{font-family:inherit;cursor:pointer;}
+  input,select{font-family:inherit;}
+  button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focus-visible{
+    outline:2px solid var(--blue); outline-offset:2px;
+  }
+
+  .app-shell{max-width:1180px;margin:0 auto;padding:24px 20px 64px;}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px;flex-wrap:wrap;}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand-mark{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg, var(--blue), var(--orange));flex-shrink:0;}
+  .brand-name{font-weight:900;font-size:1.15rem;letter-spacing:-0.01em;}
+
+  #storage-banner{
+    display:none;background:var(--orange-tint);border:1px solid var(--orange);color:#8A4A0F;
+    padding:10px 14px;border-radius:var(--radius);font-size:0.85rem;margin-bottom:16px;
+  }
+  #storage-banner.show{display:block;}
+
+  .layout{display:grid;grid-template-columns:340px 1fr;gap:20px;align-items:start;}
+  @media (max-width: 880px){ .layout{grid-template-columns:1fr;} }
+
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;}
+  .panel + .panel{margin-top:20px;}
+
+  .eyebrow{
+    font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);
+    display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;
+  }
+  .eyebrow .count-pill{
+    background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:1px 8px;font-size:0.72rem;color:var(--ink);
+  }
+
+  form.add-task{display:flex;flex-direction:column;gap:8px;}
+  .field-row{display:flex;gap:8px;}
+  input[type=text], select, input[type=time]{
+    width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 10px;font-size:0.9rem;color:var(--ink);background:#fff;
+  }
+  select{flex:1;}
+  .btn{
+    border:none;border-radius:8px;padding:9px 14px;font-weight:700;font-size:0.88rem;color:#fff;background:var(--blue);
+    transition:filter 0.12s ease;
+  }
+  .btn:hover{filter:brightness(0.94);}
+  .btn.btn-outline{background:transparent;color:var(--blue);border:1px solid var(--blue);}
+  .btn.btn-secondary{background:var(--ink);}
+  .btn.btn-block{width:100%;}
+  .btn.btn-sm{padding:6px 10px;font-size:0.78rem;}
+
+  .task-list{display:flex;flex-direction:column;gap:8px;}
+  .task-row{
+    border:1px solid var(--border);border-radius:8px;padding:9px 10px;background:#fff;
+    display:flex;align-items:flex-start;gap:8px;
+  }
+  .task-row.completed{background:var(--green-tint);border-color:#C8E6D4;}
+  .task-row.completed .task-text{text-decoration:line-through;color:var(--muted);}
+  .task-checkbox{
+    width:18px;height:18px;margin-top:2px;flex-shrink:0;accent-color:var(--green);cursor:pointer;
+  }
+  .task-body{flex:1;min-width:0;}
+  .task-text{font-size:0.9rem;word-break:break-word;}
+  .task-meta{display:flex;align-items:center;gap:6px;margin-top:5px;flex-wrap:wrap;}
+  .tag{font-size:0.68rem;font-weight:700;padding:2px 7px;border-radius:999px;text-transform:uppercase;letter-spacing:0.03em;}
+  .tag-high{background:var(--blue-tint);color:var(--blue);}
+  .tag-low{background:var(--amber-tint);color:var(--amber);}
+  .tag-none{background:var(--bg);color:var(--muted);border:1px solid var(--border);}
+  .tag-overdue{background:var(--orange-tint);color:#8A4A0F;}
+  .label-chip{display:inline-flex;align-items:center;gap:4px;text-transform:none;letter-spacing:0;}
+  .label-dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex-shrink:0;}
+  .tag-chip{background:var(--bg);color:var(--muted);border:1px solid var(--border);text-transform:none;letter-spacing:0;}
+  .row-actions{display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap;}
+  .row-label-select{flex:1;min-width:110px;}
+  .icon-btn{
+    border:1px solid var(--border);background:#fff;border-radius:6px;padding:4px 7px;font-size:0.78rem;color:var(--muted);
+  }
+  .icon-btn:hover{color:var(--danger);border-color:var(--danger);}
+  .icon-btn.assign-btn:hover{color:var(--blue);border-color:var(--blue);}
+  .assign-select{max-width:180px;}
+  .empty-state{color:var(--muted);font-size:0.85rem;padding:10px 2px;line-height:1.5;}
+
+  .pending-panel .eyebrow{color:#8A4A0F;}
+  .pending-panel{border-color:var(--orange);}
+
+  .label-group{margin-bottom:14px;}
+  .label-group:last-child{margin-bottom:0;}
+  .label-group-header{display:flex;align-items:center;gap:6px;font-size:0.78rem;font-weight:700;color:var(--ink);margin-bottom:8px;}
+  .label-group-count{margin-left:auto;background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:0 7px;font-size:0.7rem;color:var(--muted);}
+
+  .inline-new-form{display:none;flex-direction:column;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;margin-top:8px;}
+  .inline-form-actions{display:flex;gap:8px;}
+  .swatch-picker{display:flex;gap:6px;flex-wrap:wrap;}
+  .swatch{width:24px;height:24px;border-radius:50%;border:2px solid transparent;padding:0;}
+  .swatch.selected{border-color:var(--ink);box-shadow:0 0 0 2px #fff, 0 0 0 4px var(--ink);}
+
+  .manage-toggle{margin-top:10px;}
+  #manageLabelsTags{margin-top:14px;padding-top:14px;border-top:1px solid var(--border);}
+  #manageRecurring{margin-top:14px;padding-top:14px;border-top:1px solid var(--border);}
+  .manage-row{border:1px solid var(--border);border-radius:8px;padding:8px 10px;background:#fff;margin-bottom:8px;}
+  .manage-row:last-child{margin-bottom:0;}
+  .manage-row-main{display:flex;align-items:center;gap:6px;font-size:0.85rem;flex-wrap:wrap;}
+  .manage-row-name{flex:1;font-weight:700;word-break:break-word;}
+  .manage-row-count{font-size:0.68rem;color:var(--muted);white-space:nowrap;}
+  .manage-row-actions{display:flex;gap:6px;margin-top:7px;flex-wrap:wrap;}
+  .manage-color-row{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+
+  .repeat-toggle-row{display:flex;align-items:center;gap:8px;font-size:0.85rem;cursor:pointer;margin-top:2px;}
+  .repeat-toggle-row input{width:16px;height:16px;margin:0;accent-color:var(--blue);}
+  .day-picker{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;}
+  .day-btn{width:34px;height:30px;border-radius:8px;border:1px solid var(--border);background:#fff;font-size:0.68rem;font-weight:700;color:var(--muted);}
+  .day-btn.selected{background:var(--blue);border-color:var(--blue);color:#fff;}
+  .day-picker.small{margin:7px 0 0;}
+  .day-picker.small .day-btn{width:26px;height:24px;font-size:0.6rem;}
+  .tag-repeat{background:var(--bg);color:var(--muted);border:1px solid var(--border);}
+  .task-edit-form{display:flex;flex-direction:column;gap:6px;margin-top:8px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px;}
+  .task-edit-form input, .task-edit-form select{width:100%;}
+
+  [draggable="true"]{cursor:grab;}
+  .drop-target-active{outline:2px dashed var(--blue);outline-offset:2px;}
+
+  .view-tabs{display:flex;gap:6px;margin-bottom:16px;}
+  .view-tab{border:1px solid var(--border);background:#fff;border-radius:8px;padding:6px 14px;font-weight:700;font-size:0.85rem;color:var(--muted);}
+  .view-tab.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+
+  .calendar-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:10px;}
+  .date-nav{display:flex;align-items:center;gap:8px;}
+  .date-heading{font-size:1.4rem;font-weight:900;letter-spacing:-0.01em;}
+  .nav-btn{
+    width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:#fff;font-weight:700;color:var(--ink);
+  }
+  .today-btn{border:1px solid var(--border);background:#fff;border-radius:8px;padding:6px 10px;font-size:0.8rem;font-weight:700;color:var(--ink);}
+
+  .progress-wrap{margin:12px 0 20px;}
+  .progress-label{font-size:0.8rem;color:var(--muted);margin-bottom:6px;}
+  .progress-track{height:8px;border-radius:999px;background:var(--border);overflow:hidden;}
+  .progress-fill{height:100%;background:linear-gradient(90deg, var(--blue), var(--green));transition:width 0.25s ease;}
+
+  form.add-block{
+    display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;background:var(--bg);border:1px dashed var(--border);
+    border-radius:var(--radius);padding:12px;
+  }
+  form.add-block .field{display:flex;flex-direction:column;gap:4px;font-size:0.72rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.03em;}
+  form.add-block input{width:auto;}
+  #newLabelFormBlock{margin-bottom:18px;}
+
+  .panel-subsection{margin:0 0 18px;padding:12px;border:1px dashed var(--border);border-radius:var(--radius);background:var(--bg);}
+
+  .block-card{border:1px solid var(--border);border-radius:var(--radius);background:#fff;margin-bottom:14px;overflow:hidden;}
+  .block-head{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;
+    background:var(--bg);border-bottom:1px solid var(--border);flex-wrap:wrap;
+  }
+  .block-head-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .block-time{font-weight:900;font-size:1rem;}
+  .pips{display:flex;align-items:center;gap:10px;}
+  .pip-group{display:flex;align-items:center;gap:4px;}
+  .pip-caption{font-size:0.68rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.03em;}
+  .pip{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--blue);}
+  .pip.filled{background:var(--blue);}
+  .pip.low{border-color:var(--amber);}
+  .pip.low.filled{background:var(--amber);}
+  .none-badge{font-size:0.72rem;color:var(--muted);border:1px solid var(--border);border-radius:999px;padding:1px 8px;}
+  .block-actions{display:flex;gap:6px;}
+  .block-body{padding:12px 14px;}
+  .block-tasks{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
+  .quick-add-row{display:flex;gap:6px;flex-wrap:wrap;}
+  .quick-add-row select{flex:1;min-width:140px;}
+
+  .week-header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+  .week-grid{display:grid;grid-template-columns:repeat(7,minmax(150px,1fr));gap:10px;overflow-x:auto;}
+  @media (max-width: 880px){ .week-grid{grid-template-columns:repeat(7,220px);} }
+  .week-day-col{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);min-height:120px;display:flex;flex-direction:column;}
+  .week-day-head{padding:8px 10px;text-align:center;border-bottom:1px solid var(--border);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;}
+  .week-day-head:hover{background:var(--surface);}
+  .week-day-head.today{background:var(--blue);color:#fff;}
+  .week-day-name{font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;opacity:0.85;}
+  .week-day-num{font-size:1.1rem;font-weight:900;}
+  .week-day-progress{font-size:0.65rem;opacity:0.85;}
+  .week-day-body{padding:8px;display:flex;flex-direction:column;gap:8px;flex:1;min-height:60px;}
+  .week-unscheduled{display:flex;flex-direction:column;gap:5px;padding-bottom:6px;border-bottom:1px dashed var(--border);}
+  .week-block{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 7px;}
+  .week-block-time{font-size:0.68rem;font-weight:700;color:var(--muted);margin-bottom:5px;display:flex;align-items:center;flex-wrap:wrap;}
+  .week-block-empty{font-size:0.68rem;color:var(--muted);font-style:italic;}
+  .week-chip{display:flex;align-items:center;gap:5px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:4px 6px;font-size:0.72rem;margin-bottom:4px;}
+  .week-chip:last-child{margin-bottom:0;}
+  .week-chip.done .chip-text{text-decoration:line-through;color:var(--muted);}
+  .week-chip .task-checkbox{width:13px;height:13px;margin:0;}
+  .chip-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;display:inline-block;}
+  .chip-text{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .chip-pr{font-size:0.62rem;font-weight:900;border-radius:4px;padding:0 4px;}
+  .chip-pr.high{background:var(--blue-tint);color:var(--blue);}
+  .chip-pr.low{background:var(--amber-tint);color:var(--amber);}
+
+  #toast{
+    position:fixed;top:18px;right:18px;z-index:50;display:flex;flex-direction:column;gap:8px;max-width:320px;
+  }
+  .toast-msg{
+    background:var(--ink);color:#fff;padding:10px 14px;border-radius:8px;font-size:0.85rem;box-shadow:var(--shadow);
+    animation:toast-in 0.18s ease;
+  }
+  .toast-msg.error{background:var(--danger);}
+  @keyframes toast-in{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);}}
+
+  .footer-bar{margin-top:26px;display:flex;justify-content:flex-end;}
+  .reset-link{background:none;border:none;color:var(--muted);font-size:0.78rem;text-decoration:underline;padding:4px;}
+
+  @media (prefers-reduced-motion: reduce){
+    .toast-msg{animation:none;}
+    .progress-fill{transition:none;}
+  }
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div class="brand-name">Time Block Planner</div>
+    </div>
+  </div>
+
+  <div id="storage-banner">Your browser is blocking local storage (common in private/incognito mode), so changes will not be saved after you close this tab. Open this file in a normal browser window to enable saving.</div>
+
+  <div class="layout">
+    <div class="left-col">
+
+      <div class="panel" id="syncPanel">
+        <div class="eyebrow"><span>Sync Across Devices</span><span class="count-pill" id="syncStatusPill">Not connected</span></div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <input type="password" id="syncTokenInput" placeholder="GitHub token (gist scope only)">
+          <input type="text" id="syncGistIdInput" placeholder="Gist ID (leave blank to create new)">
+          <div class="inline-form-actions">
+            <button type="button" class="btn btn-sm" id="saveSyncSettings">Save &amp; Connect</button>
+            <button type="button" class="btn btn-sm btn-outline" id="createNewGistBtn">Create New Gist</button>
+            <button type="button" class="btn btn-sm btn-outline" id="syncNowBtn">Sync Now</button>
+          </div>
+          <div class="empty-state" style="padding:0;">On your first Mac: paste your token, click "Create New Gist," then copy the Gist ID it fills in. On your second Mac: paste the same token and that Gist ID, then click "Save &amp; Connect."</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="eyebrow"><span>Add a Task</span></div>
+        <form class="add-task" id="addTaskForm">
+          <input type="text" id="newTaskText" placeholder="What needs to get done?" maxlength="200">
+          <div class="field-row">
+            <select id="newTaskPriority">
+              <option value="none">No priority</option>
+              <option value="low">Low priority</option>
+              <option value="high">High priority</option>
+            </select>
+            <select id="newTaskBlock"><option value="">Unscheduled</option></select>
+          </div>
+          <div class="field-row">
+            <select id="newTaskLabel"></select>
+            <select id="newTaskTag"></select>
+          </div>
+          <div class="inline-new-form" id="newLabelForm">
+            <input type="text" id="newLabelName" placeholder="New label name">
+            <div class="swatch-picker" id="labelSwatchPicker"></div>
+            <div class="inline-form-actions">
+              <button type="button" class="btn btn-sm" id="saveNewLabel">Save Label</button>
+              <button type="button" class="btn btn-sm btn-outline" id="cancelNewLabel">Cancel</button>
+            </div>
+          </div>
+          <div class="inline-new-form" id="newTagForm">
+            <input type="text" id="newTagName" placeholder="New tag name">
+            <div class="inline-form-actions">
+              <button type="button" class="btn btn-sm" id="saveNewTag">Save Tag</button>
+              <button type="button" class="btn btn-sm btn-outline" id="cancelNewTag">Cancel</button>
+            </div>
+          </div>
+          <label class="repeat-toggle-row"><input type="checkbox" id="newTaskRepeat"><span>Repeat this task</span></label>
+          <div class="inline-new-form" id="repeatDaysForm">
+            <div class="day-picker" id="repeatDayPicker"></div>
+            <div class="inline-form-actions">
+              <button type="button" class="btn btn-sm btn-outline" data-action="repeat-preset" data-preset="daily">Every day</button>
+              <button type="button" class="btn btn-sm btn-outline" data-action="repeat-preset" data-preset="weekdays">Weekdays</button>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-block">Add Task</button>
+        </form>
+        <button type="button" class="reset-link manage-toggle" id="toggleManage">Manage Labels &amp; Tags</button>
+        <div id="manageLabelsTags" style="display:none;">
+          <div class="eyebrow"><span>Labels</span></div>
+          <div id="manageLabelsList"></div>
+          <div class="eyebrow" style="margin-top:14px;"><span>Tags</span></div>
+          <div id="manageTagsList"></div>
+        </div>
+        <button type="button" class="reset-link manage-toggle" id="toggleRecurring">Manage Recurring Tasks</button>
+        <div id="manageRecurring" style="display:none;">
+          <div class="eyebrow"><span>Recurring Tasks</span></div>
+          <div id="manageRecurringList"></div>
+        </div>
+      </div>
+
+      <div class="panel pending-panel">
+        <div class="eyebrow"><span>Pending from Previous Day</span><span class="count-pill" id="pendingCount">0</span></div>
+        <div id="pendingList"></div>
+      </div>
+
+      <div class="panel">
+        <div class="eyebrow"><span>Unscheduled Tasks</span><span class="count-pill" id="backlogCount">0</span></div>
+        <div id="backlogList"></div>
+      </div>
+
+    </div>
+
+    <div class="right-col">
+      <div class="panel">
+
+        <div class="view-tabs">
+          <button type="button" class="view-tab" id="tabDay" data-action="set-view" data-view="day">Day</button>
+          <button type="button" class="view-tab" id="tabWeek" data-action="set-view" data-view="week">Week</button>
+        </div>
+
+        <div id="dayViewSection">
+          <div class="calendar-header">
+            <div class="date-nav">
+              <button class="nav-btn" data-action="prev-day" title="Previous day">&#8592;</button>
+              <h2 class="date-heading" id="dateHeading">Today</h2>
+              <button class="nav-btn" data-action="next-day" title="Next day">&#8594;</button>
+            </div>
+            <button class="today-btn" data-action="jump-today">Jump to Today</button>
+          </div>
+
+          <div class="progress-wrap">
+            <div class="progress-label" id="progressLabel">0 of 0 tasks complete</div>
+            <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+          </div>
+
+          <form class="add-block" id="addBlockForm">
+            <div class="field">Start<input type="time" id="blockStart"></div>
+            <div class="field">End<input type="time" id="blockEnd"></div>
+            <div class="field" style="flex:1;min-width:160px;">Label<select id="blockLabelSelect"></select></div>
+            <button type="submit" class="btn">+ Add Time Block</button>
+          </form>
+          <div class="inline-new-form" id="newLabelFormBlock">
+            <input type="text" id="newLabelNameBlock" placeholder="New label name">
+            <div class="swatch-picker" id="labelSwatchPickerBlock"></div>
+            <div class="inline-form-actions">
+              <button type="button" class="btn btn-sm" id="saveNewLabelBlock">Save Label</button>
+              <button type="button" class="btn btn-sm btn-outline" id="cancelNewLabelBlock">Cancel</button>
+            </div>
+          </div>
+
+          <div class="panel-subsection" id="dayUnscheduledSection" data-dropzone="day">
+            <div class="eyebrow"><span>Unscheduled for This Day</span><span class="count-pill" id="dayUnschedCount">0</span></div>
+            <div id="dayUnscheduledList"></div>
+          </div>
+
+          <div id="blocksContainer" data-dropzone="day"></div>
+        </div>
+
+        <div id="weekViewSection" style="display:none;">
+          <div class="week-header">
+            <button class="nav-btn" data-action="prev-week" title="Previous week">&#8592;</button>
+            <h2 class="date-heading" id="weekRangeLabel">This Week</h2>
+            <button class="nav-btn" data-action="next-week" title="Next week">&#8594;</button>
+            <button class="today-btn" data-action="this-week">This Week</button>
+          </div>
+          <div class="week-grid" id="weekGrid"></div>
+        </div>
+
+      </div>
+
+      <div class="footer-bar">
+        <button class="reset-link" id="resetAll">Reset all data</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" aria-live="polite"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  var STORAGE_KEY = "planner-data";
+  function detectLocalStorage(){
+    try{
+      var k = "__planner_test__";
+      window.localStorage.setItem(k, "1");
+      window.localStorage.removeItem(k);
+      return true;
+    }catch(e){ return false; }
+  }
+  var hasStorage = typeof window.localStorage !== "undefined" && detectLocalStorage();
+  var data = { tasks:{}, blocks:{}, labels:{}, tags:{}, recurringTemplates:{}, lastCheckedDate:null, seededDefaults:false };
+  var viewingDate = todayStr();
+  var currentView = "day";
+  var weekAnchor = todayStr();
+  var selectedNewLabelColor = null;
+  var selectedNewLabelColorBlock = null;
+  var colorPickerOpenFor = null;
+  var editingTaskId = null;
+  var selectedRepeatDays = [];
+  var DAY_LETTERS = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+
+  var SYNC_TOKEN_KEY = "planner-sync-token";
+  var SYNC_GIST_KEY = "planner-sync-gist-id";
+  var SYNC_FILE_NAME = "planner-data.json";
+  var syncToken = "";
+  var syncGistId = "";
+  var syncStatus = "idle";
+  var syncStatusMessage = "";
+  var lastSyncedAt = null;
+  var pushDebounceTimer = null;
+  var syncPollInterval = null;
+
+  var SWATCHES = ['#3F9463','#C64B5A','#2E9E8F','#B4508F','#C99A2E','#5B6470','#3E7CB1','#E0714B'];
+
+  function todayStr(){
+    var d = new Date();
+    return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate());
+  }
+  function pad(n){ return n < 10 ? "0"+n : ""+n; }
+  function parseLocalDate(str){
+    var parts = str.split("-").map(Number);
+    return new Date(parts[0], parts[1]-1, parts[2]);
+  }
+  function addDaysToDate(str, n){
+    var d = parseLocalDate(str);
+    d.setDate(d.getDate() + n);
+    return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate());
+  }
+  function daysBetween(fromStr, toStr){
+    var a = parseLocalDate(fromStr), b = parseLocalDate(toStr);
+    return Math.round((b - a) / 86400000);
+  }
+  function formatDateDisplay(str){
+    var d = parseLocalDate(str);
+    return d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+  }
+  function formatDateShort(str){
+    var d = parseLocalDate(str);
+    return d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+  }
+  function formatTimeDisplay(t){
+    var parts = t.split(":").map(Number);
+    var h = parts[0], m = parts[1];
+    var ampm = h >= 12 ? "PM" : "AM";
+    var hh = h % 12; if (hh === 0) hh = 12;
+    return hh + ":" + pad(m) + " " + ampm;
+  }
+  function getWeekStart(dateStr){
+    var d = parseLocalDate(dateStr);
+    var day = d.getDay();
+    var diff = (day === 0 ? -6 : 1 - day);
+    d.setDate(d.getDate() + diff);
+    return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate());
+  }
+  function uid(){
+    if (window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID();
+    return "id-" + Date.now() + "-" + Math.random().toString(16).slice(2);
+  }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+  function hexToRgba(hex, alpha){
+    var h = hex.replace('#','');
+    var r = parseInt(h.substring(0,2),16), g = parseInt(h.substring(2,4),16), b = parseInt(h.substring(4,6),16);
+    return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+  }
+  function showToast(msg, type){
+    var el = document.createElement("div");
+    el.className = "toast-msg" + (type === "error" ? " error" : "");
+    el.textContent = msg;
+    document.getElementById("toast").appendChild(el);
+    setTimeout(function(){ el.remove(); }, 3200);
+  }
+
+  function seedDefaultsIfNeeded(){
+    if (data.seededDefaults) return;
+    var defaultLabels = [
+      {id:'label-personal', name:'Personal', color:'#4291AF'},
+      {id:'label-unbounded', name:'Unbounded', color:'#444348'},
+      {id:'label-jjresuelve', name:'JJ Resuelve', color:'#FF8F33'},
+      {id:'label-flightattendant', name:'Flight Attendant', color:'#7C5CBF'}
+    ];
+    var defaultTags = [
+      {id:'tag-medical', name:'Medical'},
+      {id:'tag-growth', name:'Growth'},
+      {id:'tag-meetings', name:'Meetings'},
+      {id:'tag-focus', name:'Focus'},
+      {id:'tag-socialmedia', name:'Social Media'}
+    ];
+    defaultLabels.forEach(function(l){
+      if (!data.labels[l.id]) data.labels[l.id] = { id:l.id, name:l.name, color:l.color, createdAt:Date.now() };
+    });
+    defaultTags.forEach(function(t){
+      if (!data.tags[t.id]) data.tags[t.id] = { id:t.id, name:t.name, createdAt:Date.now() };
+    });
+    data.seededDefaults = true;
+  }
+
+  function loadData(){
+    if (!hasStorage){
+      document.getElementById("storage-banner").classList.add("show");
+      data.lastCheckedDate = todayStr();
+      seedDefaultsIfNeeded();
+      return;
+    }
+    try{
+      var raw = window.localStorage.getItem(STORAGE_KEY);
+      if (raw){
+        var parsed = JSON.parse(raw);
+        data = Object.assign({ tasks:{}, blocks:{}, labels:{}, tags:{}, recurringTemplates:{}, lastCheckedDate:null, seededDefaults:false }, parsed);
+        if (!data.recurringTemplates) data.recurringTemplates = {};
+      } else {
+        data.lastCheckedDate = todayStr();
+      }
+    }catch(err){
+      data = { tasks:{}, blocks:{}, labels:{}, tags:{}, recurringTemplates:{}, lastCheckedDate: todayStr(), seededDefaults:false };
+    }
+    seedDefaultsIfNeeded();
+  }
+
+  function saveData(){
+    data.updatedAt = Date.now();
+    if (hasStorage){
+      try{
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      }catch(err){
+        showToast("Could not save. Your last change may not persist.", "error");
+      }
+    }
+    scheduleSyncPush();
+  }
+
+  function loadSyncSettings(){
+    if (!hasStorage) return;
+    try{
+      syncToken = window.localStorage.getItem(SYNC_TOKEN_KEY) || "";
+      syncGistId = window.localStorage.getItem(SYNC_GIST_KEY) || "";
+    }catch(e){}
+  }
+  function timeAgo(ts){
+    var sec = Math.round((Date.now() - ts) / 1000);
+    if (sec < 60) return "just now";
+    var min = Math.round(sec / 60);
+    if (min < 60) return min + " min ago";
+    var hr = Math.round(min / 60);
+    return hr + " hr ago";
+  }
+  function renderSyncStatus(){
+    var pill = document.getElementById('syncStatusPill');
+    if (!pill) return;
+    if (!syncGistId){ pill.textContent = "Not connected"; return; }
+    if (syncStatus === "syncing"){ pill.textContent = "Syncing\u2026"; return; }
+    if (syncStatus === "error"){ pill.textContent = "Sync error"; pill.title = syncStatusMessage; return; }
+    pill.title = "";
+    pill.textContent = lastSyncedAt ? ("Synced " + timeAgo(lastSyncedAt)) : "Connected";
+  }
+  function setSyncStatus(status, message){
+    syncStatus = status;
+    syncStatusMessage = message || "";
+    if (status === "synced") lastSyncedAt = Date.now();
+    renderSyncStatus();
+  }
+
+  function pushToGist(){
+    if (!syncToken || !syncGistId) return Promise.resolve();
+    setSyncStatus("syncing");
+    var body = {};
+    body.files = {};
+    body.files[SYNC_FILE_NAME] = { content: JSON.stringify(data) };
+    return fetch("https://api.github.com/gists/" + syncGistId, {
+      method: "PATCH",
+      headers: {
+        "Authorization": "token " + syncToken,
+        "Accept": "application/vnd.github+json",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    }).then(function(res){
+      if (!res.ok) throw new Error("GitHub responded with " + res.status);
+      setSyncStatus("synced");
+    }).catch(function(err){
+      setSyncStatus("error", "Could not push: " + err.message);
+    });
+  }
+  function scheduleSyncPush(){
+    if (!syncToken || !syncGistId) return;
+    if (pushDebounceTimer) clearTimeout(pushDebounceTimer);
+    pushDebounceTimer = setTimeout(function(){ pushToGist(); }, 2000);
+  }
+
+  function pullFromGist(forceAdopt){
+    if (!syncToken || !syncGistId) return Promise.resolve();
+    setSyncStatus("syncing");
+    return fetch("https://api.github.com/gists/" + syncGistId, {
+      headers: { "Authorization": "token " + syncToken, "Accept": "application/vnd.github+json" }
+    }).then(function(res){
+      if (!res.ok) throw new Error("GitHub responded with " + res.status);
+      return res.json();
+    }).then(function(json){
+      var file = json.files && json.files[SYNC_FILE_NAME];
+      if (!file || !file.content){ setSyncStatus("synced"); return; }
+      var remote = JSON.parse(file.content);
+      var shouldAdopt = forceAdopt || (remote.updatedAt && (!data.updatedAt || remote.updatedAt > data.updatedAt));
+      if (shouldAdopt){
+        data = remote;
+        if (hasStorage){
+          try{ window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }catch(e){}
+        }
+        editingTaskId = null;
+        colorPickerOpenFor = null;
+        render();
+      }
+      setSyncStatus("synced");
+    }).catch(function(err){
+      setSyncStatus("error", "Could not pull: " + err.message);
+    });
+  }
+
+  function createNewGist(){
+    var tokenVal = document.getElementById("syncTokenInput").value.trim();
+    if (!tokenVal){ showToast("Paste your GitHub token first.", "error"); return; }
+    syncToken = tokenVal;
+    if (hasStorage) window.localStorage.setItem(SYNC_TOKEN_KEY, syncToken);
+    setSyncStatus("syncing");
+    var body = { description: "Time Block Planner sync data", "public": false, files: {} };
+    body.files[SYNC_FILE_NAME] = { content: JSON.stringify(data) };
+    fetch("https://api.github.com/gists", {
+      method: "POST",
+      headers: {
+        "Authorization": "token " + syncToken,
+        "Accept": "application/vnd.github+json",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    }).then(function(res){
+      if (!res.ok) throw new Error("GitHub responded with " + res.status);
+      return res.json();
+    }).then(function(json){
+      syncGistId = json.id;
+      if (hasStorage) window.localStorage.setItem(SYNC_GIST_KEY, syncGistId);
+      document.getElementById("syncGistIdInput").value = syncGistId;
+      setSyncStatus("synced");
+      showToast('Gist created. Copy this ID into the other Mac\u2019s "Gist ID" field.');
+      if (!syncPollInterval) syncPollInterval = setInterval(pullFromGist, 45000);
+    }).catch(function(err){
+      setSyncStatus("error", "Could not create gist: " + err.message);
+    });
+  }
+
+  function runRollover(){
+    var today = todayStr();
+    if (data.lastCheckedDate === today) return;
+    Object.keys(data.tasks).forEach(function(id){
+      var t = data.tasks[id];
+      if (!t.completed && t.date && t.date < today){
+        if (t.blockId && data.blocks[t.blockId]){
+          var idx = data.blocks[t.blockId].taskIds.indexOf(id);
+          if (idx > -1) data.blocks[t.blockId].taskIds.splice(idx, 1);
+        }
+        t.rolledFrom = t.date;
+        t.blockId = null;
+        t.date = null;
+        t.pending = true;
+      }
+    });
+    data.lastCheckedDate = today;
+  }
+
+  function ensureInstanceForTemplateOnDate(templateId, dateStr){
+    var tpl = data.recurringTemplates[templateId];
+    if (!tpl || !tpl.active) return null;
+    var dow = parseLocalDate(dateStr).getDay();
+    if (tpl.daysOfWeek.indexOf(dow) === -1) return null;
+    var exists = Object.keys(data.tasks).some(function(tid){
+      var t = data.tasks[tid];
+      return t.templateId === templateId && t.date === dateStr;
+    });
+    if (exists) return null;
+    var newId = uid();
+    data.tasks[newId] = {
+      id:newId, text:tpl.text, priority:tpl.priority, completed:false,
+      blockId:null, date:dateStr, pending:false, rolledFrom:null,
+      labelId: tpl.labelId || null, tagId: tpl.tagId || null,
+      templateId: templateId, createdAt: Date.now()
+    };
+    return newId;
+  }
+  function ensureRecurringInstancesForToday(){
+    var today = todayStr();
+    Object.keys(data.recurringTemplates).forEach(function(id){
+      ensureInstanceForTemplateOnDate(id, today);
+    });
+  }
+
+  function getBlocksForDate(dateStr){
+    return Object.keys(data.blocks)
+      .map(function(id){ return data.blocks[id]; })
+      .filter(function(b){ return b.date === dateStr; })
+      .sort(function(a,b){ return a.start < b.start ? -1 : (a.start > b.start ? 1 : 0); });
+  }
+  function countInBlock(block, priority){
+    return block.taskIds.filter(function(id){
+      var t = data.tasks[id];
+      return t && t.priority === priority;
+    }).length;
+  }
+  function canAssign(block, priority){
+    if (priority === "high") return countInBlock(block, "high") < 1;
+    if (priority === "low") return countInBlock(block, "low") < 3;
+    return true;
+  }
+  function assignTaskToBlock(taskId, blockId){
+    var task = data.tasks[taskId];
+    var block = data.blocks[blockId];
+    if (!task || !block) return false;
+    if (!canAssign(block, task.priority)){
+      var label = task.priority === "high" ? "1 High priority task" : "3 Low priority tasks";
+      showToast("That block already has its limit of " + label + ".", "error");
+      return false;
+    }
+    if (task.blockId && data.blocks[task.blockId]){
+      var oldIdx = data.blocks[task.blockId].taskIds.indexOf(taskId);
+      if (oldIdx > -1) data.blocks[task.blockId].taskIds.splice(oldIdx, 1);
+    }
+    task.blockId = blockId;
+    task.date = block.date;
+    task.pending = false;
+    task.rolledFrom = null;
+    if (block.taskIds.indexOf(taskId) === -1) block.taskIds.push(taskId);
+    return true;
+  }
+  function unassignTask(taskId){
+    var task = data.tasks[taskId];
+    if (!task) return;
+    if (task.blockId && data.blocks[task.blockId]){
+      var idx = data.blocks[task.blockId].taskIds.indexOf(taskId);
+      if (idx > -1) data.blocks[task.blockId].taskIds.splice(idx, 1);
+    }
+    task.blockId = null;
+    task.date = null;
+    task.pending = false;
+  }
+  function deleteTask(taskId){
+    unassignTask(taskId);
+    delete data.tasks[taskId];
+  }
+  function deleteBlock(blockId){
+    var block = data.blocks[blockId];
+    if (!block) return;
+    block.taskIds.slice().forEach(function(taskId){
+      var t = data.tasks[taskId];
+      if (t){ t.blockId = null; t.date = null; t.pending = false; }
+    });
+    delete data.blocks[blockId];
+  }
+  function deleteLabel(labelId){
+    Object.keys(data.tasks).forEach(function(id){
+      if (data.tasks[id].labelId === labelId) data.tasks[id].labelId = null;
+    });
+    Object.keys(data.blocks).forEach(function(id){
+      if (data.blocks[id].labelId === labelId) data.blocks[id].labelId = null;
+    });
+    delete data.labels[labelId];
+  }
+  function deleteTag(tagId){
+    Object.keys(data.tasks).forEach(function(id){
+      if (data.tasks[id].tagId === tagId) data.tasks[id].tagId = null;
+    });
+    delete data.tags[tagId];
+  }
+  function countTasksWithLabel(labelId){
+    return Object.keys(data.tasks).filter(function(id){ return data.tasks[id].labelId === labelId; }).length;
+  }
+  function countBlocksWithLabel(labelId){
+    return Object.keys(data.blocks).filter(function(id){ return data.blocks[id].labelId === labelId; }).length;
+  }
+  function countTasksWithTag(tagId){
+    return Object.keys(data.tasks).filter(function(id){ return data.tasks[id].tagId === tagId; }).length;
+  }
+
+  function getOrderedLabels(){ return Object.keys(data.labels).map(function(id){ return data.labels[id]; }); }
+  function getOrderedTags(){ return Object.keys(data.tags).map(function(id){ return data.tags[id]; }); }
+
+  function priorityTag(priority){
+    if (priority === "high") return '<span class="tag tag-high">High</span>';
+    if (priority === "low") return '<span class="tag tag-low">Low</span>';
+    return '<span class="tag tag-none">None</span>';
+  }
+  function labelChip(labelId){
+    var l = labelId && data.labels[labelId];
+    if (!l) return '';
+    return '<span class="tag label-chip" style="background:' + hexToRgba(l.color,0.12) + ';color:' + l.color + ';border:1px solid ' + hexToRgba(l.color,0.35) + ';"><span class="label-dot" style="background:' + l.color + '"></span>' + escapeHtml(l.name) + '</span>';
+  }
+  function tagChip(tagId){
+    var t = tagId && data.tags[tagId];
+    if (!t) return '';
+    return '<span class="tag tag-chip">' + escapeHtml(t.name) + '</span>';
+  }
+  function repeatBadge(task){
+    return task.templateId ? '<span class="tag tag-repeat" title="Generated from a recurring task">&#8635; Repeats</span>' : '';
+  }
+  function rowLabelOptions(selectedId){
+    var html = '<option value="">No label</option>';
+    getOrderedLabels().forEach(function(l){
+      html += '<option value="' + l.id + '"' + (l.id === selectedId ? ' selected' : '') + '>' + escapeHtml(l.name) + '</option>';
+    });
+    return html;
+  }
+
+  function rowTagOptions(selectedId){
+    var html = '<option value="">No tag</option>';
+    getOrderedTags().forEach(function(t){
+      html += '<option value="' + t.id + '"' + (t.id === selectedId ? ' selected' : '') + '>' + escapeHtml(t.name) + '</option>';
+    });
+    return html;
+  }
+  function renderTaskEditForm(task){
+    return '<div class="task-edit-form">' +
+      '<input type="text" class="edit-text" data-edit-text-for="' + task.id + '" value="' + escapeHtml(task.text) + '">' +
+      '<div class="field-row">' +
+        '<select class="edit-priority" data-edit-priority-for="' + task.id + '">' +
+          '<option value="none"' + (task.priority === 'none' ? ' selected' : '') + '>No priority</option>' +
+          '<option value="low"' + (task.priority === 'low' ? ' selected' : '') + '>Low priority</option>' +
+          '<option value="high"' + (task.priority === 'high' ? ' selected' : '') + '>High priority</option>' +
+        '</select>' +
+        '<select class="edit-label" data-edit-label-for="' + task.id + '">' + rowLabelOptions(task.labelId) + '</select>' +
+      '</div>' +
+      '<select class="edit-tag" data-edit-tag-for="' + task.id + '">' + rowTagOptions(task.tagId) + '</select>' +
+      '<div class="inline-form-actions">' +
+        '<button type="button" class="btn btn-sm" data-action="save-edit-task" data-task-id="' + task.id + '">Save</button>' +
+        '<button type="button" class="btn btn-sm btn-outline" data-action="cancel-edit-task" data-task-id="' + task.id + '">Cancel</button>' +
+      '</div>' +
+    '</div>';
+  }
+  function canChangePriorityInBlock(taskId, blockId, newPriority){
+    var block = data.blocks[blockId];
+    if (!block) return true;
+    var countExcludingSelf = block.taskIds.filter(function(id){
+      return id !== taskId && data.tasks[id] && data.tasks[id].priority === newPriority;
+    }).length;
+    if (newPriority === 'high') return countExcludingSelf < 1;
+    if (newPriority === 'low') return countExcludingSelf < 3;
+    return true;
+  }
+
+  function renderTaskRow(task, opts){
+    opts = opts || {};
+    var overdueTag = "";
+    if (task.pending && task.rolledFrom){
+      var d = daysBetween(task.rolledFrom, todayStr());
+      overdueTag = '<span class="tag tag-overdue">' + (d <= 0 ? "Missed yesterday" : d + "d overdue") + '</span>';
+    }
+    var blockOptions = '<option value="">Assign to block...</option>' +
+      getBlocksForDate(viewingDate).map(function(b){
+        var lbl = formatTimeDisplay(b.start) + "\u2013" + formatTimeDisplay(b.end) + (b.labelId && data.labels[b.labelId] ? " " + data.labels[b.labelId].name : "");
+        return '<option value="' + b.id + '">' + escapeHtml(lbl) + '</option>';
+      }).join("");
+
+    var bodyLower;
+    if (editingTaskId === task.id){
+      bodyLower = renderTaskEditForm(task);
+    } else if (opts.showAssign){
+      bodyLower =
+        '<div class="row-actions">' +
+          '<select class="row-label-select" data-label-for="' + task.id + '" title="Label">' + rowLabelOptions(task.labelId) + '</select>' +
+          '<select class="assign-select" data-assign-for="' + task.id + '">' + blockOptions + '</select>' +
+          '<button type="button" class="icon-btn assign-btn" data-action="assign" data-task-id="' + task.id + '">Assign</button>' +
+          '<button type="button" class="icon-btn" data-action="toggle-edit-task" data-task-id="' + task.id + '">Edit</button>' +
+          '<button type="button" class="icon-btn" data-action="delete-task" data-task-id="' + task.id + '">Delete</button>' +
+        '</div>';
+    } else {
+      bodyLower =
+        '<div class="row-actions">' +
+          '<button type="button" class="icon-btn" data-action="unassign-task" data-task-id="' + task.id + '">Remove from block</button>' +
+          '<button type="button" class="icon-btn" data-action="toggle-edit-task" data-task-id="' + task.id + '">Edit</button>' +
+          '<button type="button" class="icon-btn" data-action="delete-task" data-task-id="' + task.id + '">Delete</button>' +
+        '</div>';
+    }
+
+    return (
+      '<div class="task-row ' + (task.completed ? "completed" : "") + '" draggable="' + (editingTaskId === task.id ? "false" : "true") + '" data-task-id="' + task.id + '">' +
+        '<input type="checkbox" class="task-checkbox" ' + (task.completed ? "checked" : "") + ' data-task-id="' + task.id + '">' +
+        '<div class="task-body">' +
+          '<div class="task-text">' + escapeHtml(task.text) + '</div>' +
+          '<div class="task-meta">' + priorityTag(task.priority) + labelChip(task.labelId) + tagChip(task.tagId) + repeatBadge(task) + overdueTag + '</div>' +
+          bodyLower +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function groupByLabel(tasks){
+    var byId = {};
+    getOrderedLabels().forEach(function(l){ byId[l.id] = { labelId:l.id, name:l.name, color:l.color, tasks:[] }; });
+    var noLabel = { labelId:null, name:'No Label', color:'#9AA0A6', tasks:[] };
+    tasks.forEach(function(t){
+      if (t.labelId && byId[t.labelId]) byId[t.labelId].tasks.push(t);
+      else noLabel.tasks.push(t);
+    });
+    var groups = [];
+    getOrderedLabels().forEach(function(l){ if (byId[l.id].tasks.length) groups.push(byId[l.id]); });
+    if (noLabel.tasks.length) groups.push(noLabel);
+    return groups;
+  }
+  function renderGroupedList(tasks, opts){
+    var groups = groupByLabel(tasks);
+    if (!groups.length) return "";
+    return groups.map(function(g){
+      return '<div class="label-group">' +
+        '<div class="label-group-header"><span class="label-dot" style="background:' + g.color + '"></span>' + escapeHtml(g.name) + '<span class="label-group-count">' + g.tasks.length + '</span></div>' +
+        '<div class="task-list">' + g.tasks.map(function(t){ return renderTaskRow(t, opts); }).join("") + '</div>' +
+      '</div>';
+    }).join("");
+  }
+
+  function populateLabelSelectEl(selEl, includeNewOption){
+    var cur = selEl.value;
+    var opts = '<option value="">No label</option>';
+    getOrderedLabels().forEach(function(l){ opts += '<option value="' + l.id + '">' + escapeHtml(l.name) + '</option>'; });
+    if (includeNewOption !== false) opts += '<option value="__new__">+ Add new label</option>';
+    selEl.innerHTML = opts;
+    var match = Array.prototype.some.call(selEl.options, function(o){ return o.value === cur; });
+    if (match) selEl.value = cur;
+  }
+  function populateLabelSelect(){ populateLabelSelectEl(document.getElementById('newTaskLabel')); }
+  function populateBlockLabelSelect(){ populateLabelSelectEl(document.getElementById('blockLabelSelect')); }
+  function populateTagSelect(){
+    var sel = document.getElementById('newTaskTag');
+    var cur = sel.value;
+    var opts = '<option value="">No tag</option>';
+    getOrderedTags().forEach(function(t){ opts += '<option value="' + t.id + '">' + escapeHtml(t.name) + '</option>'; });
+    opts += '<option value="__new__">+ Add new tag</option>';
+    sel.innerHTML = opts;
+    var match = Array.prototype.some.call(sel.options, function(o){ return o.value === cur; });
+    if (match) sel.value = cur;
+  }
+  function renderSwatchPicker(){
+    if (!selectedNewLabelColor) selectedNewLabelColor = SWATCHES[0];
+    var el = document.getElementById('labelSwatchPicker');
+    el.innerHTML = SWATCHES.map(function(c){
+      return '<button type="button" class="swatch' + (c === selectedNewLabelColor ? ' selected' : '') + '" data-color="' + c + '" style="background:' + c + '" aria-label="color option"></button>';
+    }).join("");
+  }
+  function renderSwatchPickerBlock(){
+    if (!selectedNewLabelColorBlock) selectedNewLabelColorBlock = SWATCHES[0];
+    var el = document.getElementById('labelSwatchPickerBlock');
+    el.innerHTML = SWATCHES.map(function(c){
+      return '<button type="button" class="swatch' + (c === selectedNewLabelColorBlock ? ' selected' : '') + '" data-color="' + c + '" style="background:' + c + '" aria-label="color option"></button>';
+    }).join("");
+  }
+
+  function manageRow(kind, id, name, color, taskCount, blockCount){
+    var dot = kind === 'label' ? '<span class="label-dot" style="background:' + color + '"></span>' : '';
+    var countText = kind === 'label'
+      ? (taskCount + ' task' + (taskCount === 1 ? '' : 's') + (blockCount ? ' \u00b7 ' + blockCount + ' block' + (blockCount === 1 ? '' : 's') : ''))
+      : (taskCount + ' task' + (taskCount === 1 ? '' : 's'));
+    var colorRow = '';
+    if (kind === 'label' && colorPickerOpenFor === id){
+      colorRow = '<div class="manage-color-row">' + SWATCHES.map(function(c){
+        return '<button type="button" class="swatch' + (c === color ? ' selected' : '') + '" data-action="apply-label-color" data-label-id="' + id + '" data-color="' + c + '" style="background:' + c + '" aria-label="color option"></button>';
+      }).join('') + '</div>';
+    }
+    return '<div class="manage-row">' +
+      '<div class="manage-row-main">' + dot + '<span class="manage-row-name">' + escapeHtml(name) + '</span><span class="manage-row-count">' + countText + '</span></div>' +
+      '<div class="manage-row-actions">' +
+        '<button type="button" class="icon-btn" data-action="edit-' + kind + '" data-' + kind + '-id="' + id + '">Rename</button>' +
+        (kind === 'label' ? '<button type="button" class="icon-btn" data-action="toggle-label-color" data-label-id="' + id + '">Color</button>' : '') +
+        '<button type="button" class="icon-btn" data-action="delete-' + kind + '" data-' + kind + '-id="' + id + '">Delete</button>' +
+      '</div>' +
+      colorRow +
+    '</div>';
+  }
+  function renderManagePanel(){
+    var labelsHtml = getOrderedLabels().map(function(l){
+      return manageRow('label', l.id, l.name, l.color, countTasksWithLabel(l.id), countBlocksWithLabel(l.id));
+    }).join("");
+    document.getElementById('manageLabelsList').innerHTML = labelsHtml || '<div class="empty-state">No labels yet.</div>';
+
+    var tagsHtml = getOrderedTags().map(function(t){
+      return manageRow('tag', t.id, t.name, null, countTasksWithTag(t.id));
+    }).join("");
+    document.getElementById('manageTagsList').innerHTML = tagsHtml || '<div class="empty-state">No tags yet.</div>';
+  }
+
+  function renderRepeatDayPicker(){
+    var el = document.getElementById('repeatDayPicker');
+    el.innerHTML = [0,1,2,3,4,5,6].map(function(d){
+      return '<button type="button" class="day-btn' + (selectedRepeatDays.indexOf(d) > -1 ? ' selected' : '') + '" data-action="toggle-repeat-day" data-day="' + d + '">' + DAY_LETTERS[d] + '</button>';
+    }).join('');
+  }
+
+  function manageRecurringRow(tpl){
+    var dayButtons = [0,1,2,3,4,5,6].map(function(d){
+      return '<button type="button" class="day-btn' + (tpl.daysOfWeek.indexOf(d) > -1 ? ' selected' : '') + '" data-action="toggle-template-day" data-template-id="' + tpl.id + '" data-day="' + d + '">' + DAY_LETTERS[d] + '</button>';
+    }).join('');
+    return '<div class="manage-row">' +
+      '<div class="manage-row-main">' +
+        '<span class="manage-row-name">' + escapeHtml(tpl.text) + '</span>' +
+        priorityTag(tpl.priority) + labelChip(tpl.labelId) + tagChip(tpl.tagId) +
+        (tpl.active ? '' : '<span class="tag tag-none">Paused</span>') +
+      '</div>' +
+      '<div class="day-picker small">' + dayButtons + '</div>' +
+      '<div class="manage-row-actions">' +
+        '<button type="button" class="icon-btn" data-action="edit-template" data-template-id="' + tpl.id + '">Rename</button>' +
+        '<button type="button" class="icon-btn" data-action="toggle-template-active" data-template-id="' + tpl.id + '">' + (tpl.active ? 'Pause' : 'Resume') + '</button>' +
+        '<button type="button" class="icon-btn" data-action="delete-template" data-template-id="' + tpl.id + '">Delete</button>' +
+      '</div>' +
+    '</div>';
+  }
+  function renderRecurringPanel(){
+    var templates = Object.keys(data.recurringTemplates).map(function(id){ return data.recurringTemplates[id]; })
+      .sort(function(a,b){ return (b.createdAt||0) - (a.createdAt||0); });
+    var html = templates.map(manageRecurringRow).join("");
+    document.getElementById('manageRecurringList').innerHTML = html || '<div class="empty-state">No recurring tasks yet. Check "Repeat this task" when adding a task to create one.</div>';
+  }
+
+  function render(){
+    document.getElementById('tabDay').classList.toggle('active', currentView === 'day');
+    document.getElementById('tabWeek').classList.toggle('active', currentView === 'week');
+    document.getElementById('dayViewSection').style.display = currentView === 'day' ? '' : 'none';
+    document.getElementById('weekViewSection').style.display = currentView === 'week' ? '' : 'none';
+
+    populateLabelSelect();
+    populateTagSelect();
+    populateBlockLabelSelect();
+    renderManagePanel();
+    renderRecurringPanel();
+
+    document.getElementById("dateHeading").textContent =
+      viewingDate === todayStr() ? "Today, " + formatDateDisplay(viewingDate) : formatDateDisplay(viewingDate);
+
+    var pendingTasks = Object.keys(data.tasks).map(function(id){ return data.tasks[id]; })
+      .filter(function(t){ return t.pending; })
+      .sort(function(a,b){ return (a.rolledFrom||"") < (b.rolledFrom||"") ? -1 : 1; });
+    document.getElementById("pendingCount").textContent = pendingTasks.length;
+    var pendingHtml = renderGroupedList(pendingTasks, { showAssign:true });
+    document.getElementById("pendingList").innerHTML = pendingHtml || '<div class="empty-state">Nothing pending. You are caught up.</div>';
+
+    var backlogTasks = Object.keys(data.tasks).map(function(id){ return data.tasks[id]; })
+      .filter(function(t){ return !t.pending && !t.blockId && !t.date; })
+      .sort(function(a,b){ return (b.createdAt||0) - (a.createdAt||0); });
+    document.getElementById("backlogCount").textContent = backlogTasks.length;
+    var backlogHtml = renderGroupedList(backlogTasks, { showAssign:true });
+    document.getElementById("backlogList").innerHTML = backlogHtml || '<div class="empty-state">No unscheduled tasks. Add one above to get started.</div>';
+
+    var blockSelect = document.getElementById("newTaskBlock");
+    var currentVal = blockSelect.value;
+    var blocksToday = getBlocksForDate(viewingDate);
+    blockSelect.innerHTML = '<option value="">Unscheduled</option>' + blocksToday.map(function(b){
+      var lbl = formatTimeDisplay(b.start) + "\u2013" + formatTimeDisplay(b.end) + (b.labelId && data.labels[b.labelId] ? " " + data.labels[b.labelId].name : "");
+      return '<option value="' + b.id + '">' + escapeHtml(lbl) + '</option>';
+    }).join("");
+    if (blocksToday.some(function(b){ return b.id === currentVal; })) blockSelect.value = currentVal;
+
+    var dayUnscheduled = Object.keys(data.tasks).map(function(id){ return data.tasks[id]; })
+      .filter(function(t){ return t.date === viewingDate && !t.blockId && !t.pending; });
+    document.getElementById('dayUnschedCount').textContent = dayUnscheduled.length;
+    document.getElementById('dayUnscheduledList').innerHTML = dayUnscheduled.length
+      ? dayUnscheduled.map(function(t){ return renderTaskRow(t, { showAssign:true }); }).join("")
+      : '<div class="empty-state">Nothing scheduled for this day outside a time block. Drag a task here, or into a block below.</div>';
+    document.getElementById('dayUnscheduledSection').setAttribute('data-date', viewingDate);
+    document.getElementById('blocksContainer').setAttribute('data-date', viewingDate);
+
+    var allDateTaskIds = [];
+    blocksToday.forEach(function(b){ allDateTaskIds = allDateTaskIds.concat(b.taskIds); });
+    var totalCount = allDateTaskIds.length + dayUnscheduled.length;
+    var doneCount = allDateTaskIds.filter(function(id){ return data.tasks[id] && data.tasks[id].completed; }).length +
+      dayUnscheduled.filter(function(t){ return t.completed; }).length;
+    document.getElementById("progressLabel").textContent = totalCount === 0
+      ? "No tasks scheduled for this day yet"
+      : doneCount + " of " + totalCount + " tasks complete";
+    document.getElementById("progressFill").style.width = totalCount ? Math.round((doneCount/totalCount)*100) + "%" : "0%";
+
+    var blocksContainer = document.getElementById("blocksContainer");
+    var blockCardsHtml = blocksToday.map(renderBlockCard).join("");
+    blocksContainer.innerHTML = blockCardsHtml || '<div class="empty-state">No time blocks for this day yet. Add one above to start scheduling.</div>';
+
+    var quickPickPool = pendingTasks.concat(backlogTasks).concat(dayUnscheduled);
+    blocksToday.forEach(function(b){
+      var sel = document.querySelector('[data-quickpick-for="' + b.id + '"]');
+      if (sel){
+        sel.innerHTML = '<option value="">Pick an existing task...</option>' + quickPickPool.map(function(t){
+          return '<option value="' + t.id + '">' + escapeHtml(t.text) + '</option>';
+        }).join("");
+      }
+    });
+
+    if (currentView === 'week') renderWeekView();
+  }
+
+  function renderBlockCard(block){
+    var highCount = countInBlock(block, "high");
+    var lowCount = countInBlock(block, "low");
+    var noneCount = countInBlock(block, "none");
+    var taskRows = block.taskIds.map(function(id){ return data.tasks[id]; }).filter(Boolean)
+      .map(function(t){ return renderTaskRow(t, { showAssign:false }); }).join("");
+
+    var pips =
+      '<div class="pips">' +
+        '<div class="pip-group"><span class="pip-caption">High</span>' +
+          '<span class="pip ' + (highCount >= 1 ? "filled" : "") + '"></span>' +
+        '</div>' +
+        '<div class="pip-group"><span class="pip-caption">Low</span>' +
+          [0,1,2].map(function(i){ return '<span class="pip low ' + (i < lowCount ? "filled" : "") + '"></span>'; }).join("") +
+        '</div>' +
+        '<span class="none-badge">None: ' + noneCount + '</span>' +
+      '</div>';
+
+    return (
+      '<div class="block-card" data-dropzone="block" data-block-id="' + block.id + '">' +
+        '<div class="block-head">' +
+          '<div class="block-head-left"><span class="block-time">' + formatTimeDisplay(block.start) + '\u2013' + formatTimeDisplay(block.end) + '</span>' + labelChip(block.labelId) + '</div>' +
+          pips +
+          '<div class="block-actions"><button type="button" class="icon-btn" data-action="delete-block" data-block-id="' + block.id + '">Delete block</button></div>' +
+        '</div>' +
+        '<div class="block-body">' +
+          '<div class="block-tasks">' + (taskRows || '<div class="empty-state">No tasks in this block yet. Drag one here.</div>') + '</div>' +
+          '<div class="quick-add-row">' +
+            '<select class="quickpick" data-quickpick-for="' + block.id + '"><option value="">Pick an existing task...</option></select>' +
+            '<button type="button" class="icon-btn assign-btn" data-action="quickpick-assign" data-block-id="' + block.id + '">Add</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function renderWeekChip(t){
+    var label = t.labelId && data.labels[t.labelId] ? data.labels[t.labelId] : null;
+    var dot = label ? '<span class="chip-dot" style="background:' + label.color + '"></span>' : '';
+    var pr = t.priority === 'high' ? '<span class="chip-pr high">H</span>' : (t.priority === 'low' ? '<span class="chip-pr low">L</span>' : '');
+    return '<div class="week-chip ' + (t.completed ? 'done' : '') + '" draggable="true" data-task-id="' + t.id + '">' +
+      '<input type="checkbox" class="task-checkbox" ' + (t.completed ? 'checked' : '') + ' data-task-id="' + t.id + '">' +
+      dot + '<span class="chip-text" title="' + escapeHtml(t.text) + '">' + escapeHtml(t.text) + '</span>' + pr +
+    '</div>';
+  }
+  function renderWeekBlock(block){
+    var tasks = block.taskIds.map(function(id){ return data.tasks[id]; }).filter(Boolean);
+    var label = block.labelId && data.labels[block.labelId] ? data.labels[block.labelId] : null;
+    var labelBit = label ? ('<span class="chip-dot" style="background:' + label.color + ';margin-left:4px;margin-right:3px;"></span>' + escapeHtml(label.name)) : '';
+    return '<div class="week-block" data-dropzone="block" data-block-id="' + block.id + '">' +
+      '<div class="week-block-time">' + formatTimeDisplay(block.start) + '\u2013' + formatTimeDisplay(block.end) + labelBit + '</div>' +
+      (tasks.length ? tasks.map(renderWeekChip).join("") : '<div class="week-block-empty">Drop a task here</div>') +
+    '</div>';
+  }
+  function renderWeekView(){
+    var weekStart = getWeekStart(weekAnchor);
+    var days = [0,1,2,3,4,5,6].map(function(i){ return addDaysToDate(weekStart, i); });
+    document.getElementById('weekRangeLabel').textContent = formatDateShort(weekStart) + ' \u2013 ' + formatDateShort(days[6]);
+
+    var html = days.map(function(dateStr){
+      var isToday = dateStr === todayStr();
+      var dayTasks = Object.keys(data.tasks).map(function(id){ return data.tasks[id]; })
+        .filter(function(t){ return t.date === dateStr && !t.blockId && !t.pending; });
+      var blocks = getBlocksForDate(dateStr);
+      var allIds = [];
+      blocks.forEach(function(b){ allIds = allIds.concat(b.taskIds); });
+      var doneCt = allIds.filter(function(id){ return data.tasks[id] && data.tasks[id].completed; }).length;
+
+      return '<div class="week-day-col">' +
+        '<div class="week-day-head ' + (isToday ? 'today' : '') + '" data-action="jump-day" data-date="' + dateStr + '">' +
+          '<div class="week-day-name">' + parseLocalDate(dateStr).toLocaleDateString('en-US', {weekday:'short'}) + '</div>' +
+          '<div class="week-day-num">' + parseLocalDate(dateStr).getDate() + '</div>' +
+          (allIds.length ? '<div class="week-day-progress">' + doneCt + '/' + allIds.length + '</div>' : '') +
+        '</div>' +
+        '<div class="week-day-body" data-dropzone="day" data-date="' + dateStr + '">' +
+          (dayTasks.length ? '<div class="week-unscheduled">' + dayTasks.map(renderWeekChip).join("") + '</div>' : '') +
+          blocks.map(renderWeekBlock).join("") +
+          (!blocks.length && !dayTasks.length ? '<div class="empty-state" style="font-size:0.72rem;padding:4px 2px;">No blocks yet</div>' : '') +
+        '</div>' +
+      '</div>';
+    }).join("");
+
+    document.getElementById('weekGrid').innerHTML = html;
+  }
+
+  document.getElementById("addTaskForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    var textEl = document.getElementById("newTaskText");
+    var text = textEl.value.trim();
+    if (!text){ showToast("Type a task first.", "error"); textEl.focus(); return; }
+    var priority = document.getElementById("newTaskPriority").value;
+    var blockId = document.getElementById("newTaskBlock").value;
+    var labelVal = document.getElementById("newTaskLabel").value;
+    var tagVal = document.getElementById("newTaskTag").value;
+    var labelId = (labelVal && labelVal !== "__new__") ? labelVal : null;
+    var tagId = (tagVal && tagVal !== "__new__") ? tagVal : null;
+    var repeatOn = document.getElementById("newTaskRepeat").checked;
+
+    var newTaskId = null;
+
+    if (repeatOn){
+      if (selectedRepeatDays.length === 0){ showToast("Pick at least one day to repeat on.", "error"); return; }
+      var tplId = uid();
+      data.recurringTemplates[tplId] = {
+        id:tplId, text:text, priority:priority, labelId:labelId, tagId:tagId,
+        daysOfWeek: selectedRepeatDays.slice(), active:true, createdAt: Date.now()
+      };
+      newTaskId = ensureInstanceForTemplateOnDate(tplId, todayStr());
+      if (!newTaskId) showToast('Repeat saved. The first task appears on its next matching day.');
+    } else {
+      var id = uid();
+      data.tasks[id] = {
+        id:id, text:text, priority:priority, completed:false, blockId:null, date:null, pending:false, rolledFrom:null,
+        labelId:labelId, tagId:tagId, createdAt: Date.now()
+      };
+      newTaskId = id;
+    }
+
+    if (blockId && newTaskId){
+      var ok = assignTaskToBlock(newTaskId, blockId);
+      if (!ok) showToast("Task added to Unscheduled instead.", "error");
+    }
+
+    textEl.value = "";
+    document.getElementById("newTaskPriority").value = "none";
+    document.getElementById("newTaskLabel").value = "";
+    document.getElementById("newTaskTag").value = "";
+    document.getElementById("newTaskRepeat").checked = false;
+    document.getElementById("repeatDaysForm").style.display = "none";
+    selectedRepeatDays = [];
+    saveData(); render();
+  });
+
+  document.getElementById('newTaskRepeat').addEventListener('change', function(){
+    var box = document.getElementById('repeatDaysForm');
+    if (this.checked){
+      if (selectedRepeatDays.length === 0) selectedRepeatDays = [parseLocalDate(todayStr()).getDay()];
+      renderRepeatDayPicker();
+      box.style.display = 'flex';
+    } else {
+      box.style.display = 'none';
+    }
+  });
+
+  document.getElementById('toggleRecurring').addEventListener('click', function(){
+    var panel = document.getElementById('manageRecurring');
+    var isHidden = panel.style.display === 'none' || !panel.style.display;
+    panel.style.display = isHidden ? 'block' : 'none';
+    this.textContent = isHidden ? 'Hide Recurring Tasks' : 'Manage Recurring Tasks';
+    if (isHidden) renderRecurringPanel();
+  });
+
+  document.getElementById("addBlockForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    var startEl = document.getElementById("blockStart");
+    var endEl = document.getElementById("blockEnd");
+    var start = startEl.value;
+    var end = endEl.value;
+    var labelVal = document.getElementById("blockLabelSelect").value;
+    if (!start){ showToast("Pick a start time.", "error"); startEl.focus(); return; }
+    if (!end){ showToast("Pick an end time.", "error"); endEl.focus(); return; }
+    if (end <= start){ showToast("End time must be after start time.", "error"); return; }
+    var id = uid();
+    data.blocks[id] = {
+      id:id, date:viewingDate, start:start, end:end,
+      labelId: (labelVal && labelVal !== "__new__") ? labelVal : null,
+      taskIds:[]
+    };
+    document.getElementById("blockStart").value = "";
+    document.getElementById("blockEnd").value = "";
+    document.getElementById("blockLabelSelect").value = "";
+    document.getElementById("newLabelFormBlock").style.display = "none";
+    saveData(); render();
+  });
+
+  document.getElementById('newTaskLabel').addEventListener('change', function(){
+    if (this.value === '__new__'){
+      renderSwatchPicker();
+      document.getElementById('newLabelForm').style.display = 'flex';
+      document.getElementById('newLabelName').focus();
+    } else {
+      document.getElementById('newLabelForm').style.display = 'none';
+    }
+  });
+  document.getElementById('cancelNewLabel').addEventListener('click', function(){
+    document.getElementById('newLabelForm').style.display = 'none';
+    document.getElementById('newTaskLabel').value = '';
+    document.getElementById('newLabelName').value = '';
+  });
+  document.getElementById('saveNewLabel').addEventListener('click', function(){
+    var name = document.getElementById('newLabelName').value.trim();
+    if (!name){ showToast('Enter a label name.', 'error'); return; }
+    var id = uid();
+    data.labels[id] = { id:id, name:name, color: selectedNewLabelColor || SWATCHES[0], createdAt: Date.now() };
+    saveData();
+    populateLabelSelect();
+    populateBlockLabelSelect();
+    document.getElementById('newTaskLabel').value = id;
+    document.getElementById('newLabelForm').style.display = 'none';
+    document.getElementById('newLabelName').value = '';
+    renderManagePanel();
+    showToast('Label "' + name + '" added.');
+  });
+
+  document.getElementById('blockLabelSelect').addEventListener('change', function(){
+    if (this.value === '__new__'){
+      renderSwatchPickerBlock();
+      document.getElementById('newLabelFormBlock').style.display = 'flex';
+      document.getElementById('newLabelNameBlock').focus();
+    } else {
+      document.getElementById('newLabelFormBlock').style.display = 'none';
+    }
+  });
+  document.getElementById('cancelNewLabelBlock').addEventListener('click', function(){
+    document.getElementById('newLabelFormBlock').style.display = 'none';
+    document.getElementById('blockLabelSelect').value = '';
+    document.getElementById('newLabelNameBlock').value = '';
+  });
+  document.getElementById('saveNewLabelBlock').addEventListener('click', function(){
+    var name = document.getElementById('newLabelNameBlock').value.trim();
+    if (!name){ showToast('Enter a label name.', 'error'); return; }
+    var id = uid();
+    data.labels[id] = { id:id, name:name, color: selectedNewLabelColorBlock || SWATCHES[0], createdAt: Date.now() };
+    saveData();
+    populateBlockLabelSelect();
+    populateLabelSelect();
+    document.getElementById('blockLabelSelect').value = id;
+    document.getElementById('newLabelFormBlock').style.display = 'none';
+    document.getElementById('newLabelNameBlock').value = '';
+    renderManagePanel();
+    showToast('Label "' + name + '" added.');
+  });
+
+  document.getElementById('newTaskTag').addEventListener('change', function(){
+    if (this.value === '__new__'){
+      document.getElementById('newTagForm').style.display = 'flex';
+      document.getElementById('newTagName').focus();
+    } else {
+      document.getElementById('newTagForm').style.display = 'none';
+    }
+  });
+  document.getElementById('cancelNewTag').addEventListener('click', function(){
+    document.getElementById('newTagForm').style.display = 'none';
+    document.getElementById('newTaskTag').value = '';
+    document.getElementById('newTagName').value = '';
+  });
+  document.getElementById('saveNewTag').addEventListener('click', function(){
+    var name = document.getElementById('newTagName').value.trim();
+    if (!name){ showToast('Enter a tag name.', 'error'); return; }
+    var id = uid();
+    data.tags[id] = { id:id, name:name, createdAt: Date.now() };
+    saveData();
+    populateTagSelect();
+    document.getElementById('newTaskTag').value = id;
+    document.getElementById('newTagForm').style.display = 'none';
+    document.getElementById('newTagName').value = '';
+    renderManagePanel();
+    showToast('Tag "' + name + '" added.');
+  });
+
+  document.getElementById('toggleManage').addEventListener('click', function(){
+    var panel = document.getElementById('manageLabelsTags');
+    var isHidden = panel.style.display === 'none' || !panel.style.display;
+    panel.style.display = isHidden ? 'block' : 'none';
+    this.textContent = isHidden ? 'Hide Labels & Tags' : 'Manage Labels & Tags';
+    if (isHidden) renderManagePanel();
+  });
+
+  document.getElementById("saveSyncSettings").addEventListener("click", function(){
+    var tokenVal = document.getElementById("syncTokenInput").value.trim();
+    var gistVal = document.getElementById("syncGistIdInput").value.trim();
+    if (!tokenVal){ showToast("Paste your GitHub token first.", "error"); return; }
+    syncToken = tokenVal;
+    if (hasStorage) window.localStorage.setItem(SYNC_TOKEN_KEY, syncToken);
+    if (gistVal){
+      syncGistId = gistVal;
+      if (hasStorage) window.localStorage.setItem(SYNC_GIST_KEY, syncGistId);
+      pullFromGist(true);
+      if (!syncPollInterval) syncPollInterval = setInterval(pullFromGist, 45000);
+    }
+    showToast("Sync settings saved.");
+    renderSyncStatus();
+  });
+  document.getElementById("createNewGistBtn").addEventListener("click", createNewGist);
+  document.getElementById("syncNowBtn").addEventListener("click", function(){
+    pullFromGist().then(function(){ pushToGist(); });
+  });
+
+  document.getElementById("resetAll").addEventListener("click", function(){
+    if (!confirm("This deletes every task, time block, and recurring task permanently. Labels and tags reset to the defaults. Continue?")) return;
+    data = { tasks:{}, blocks:{}, labels:{}, tags:{}, recurringTemplates:{}, lastCheckedDate: todayStr(), seededDefaults:false };
+    seedDefaultsIfNeeded();
+    viewingDate = todayStr();
+    weekAnchor = todayStr();
+    currentView = "day";
+    colorPickerOpenFor = null;
+    saveData(); render();
+    showToast("All data cleared.");
+  });
+
+  document.addEventListener("change", function(e){
+    if (e.target.classList && e.target.classList.contains("task-checkbox")){
+      var id = e.target.getAttribute("data-task-id");
+      var task = data.tasks[id];
+      if (task){
+        task.completed = e.target.checked;
+        saveData(); render();
+      }
+      return;
+    }
+    if (e.target.classList && e.target.classList.contains("row-label-select")){
+      var tid = e.target.getAttribute("data-label-for");
+      var t2 = data.tasks[tid];
+      if (t2){
+        t2.labelId = e.target.value || null;
+        saveData(); render();
+      }
+    }
+  });
+
+  document.addEventListener("click", function(e){
+    var btn = e.target.closest("[data-action]");
+    if (btn){
+      var action = btn.getAttribute("data-action");
+
+      if (action === "delete-task"){
+        deleteTask(btn.getAttribute("data-task-id")); saveData(); render(); return;
+      }
+      if (action === "unassign-task"){
+        unassignTask(btn.getAttribute("data-task-id")); saveData(); render(); return;
+      }
+      if (action === "delete-block"){
+        var bid = btn.getAttribute("data-block-id");
+        if (confirm("Delete this time block? Tasks inside it will move back to Unscheduled.")){
+          deleteBlock(bid); saveData(); render();
+        }
+        return;
+      }
+      if (action === "assign"){
+        var tid2 = btn.getAttribute("data-task-id");
+        var sel = document.querySelector('[data-assign-for="' + tid2 + '"]');
+        if (!sel || !sel.value){ showToast("Pick a block first.", "error"); return; }
+        if (assignTaskToBlock(tid2, sel.value)) { saveData(); render(); }
+        return;
+      }
+      if (action === "quickpick-assign"){
+        var blockId = btn.getAttribute("data-block-id");
+        var pick = document.querySelector('[data-quickpick-for="' + blockId + '"]');
+        if (!pick || !pick.value){ showToast("Pick a task first.", "error"); return; }
+        if (assignTaskToBlock(pick.value, blockId)) { saveData(); render(); }
+        return;
+      }
+      if (action === "prev-day"){ viewingDate = addDaysToDate(viewingDate, -1); render(); return; }
+      if (action === "next-day"){ viewingDate = addDaysToDate(viewingDate, 1); render(); return; }
+      if (action === "jump-today"){ viewingDate = todayStr(); render(); return; }
+      if (action === "jump-day"){ viewingDate = btn.getAttribute("data-date"); currentView = "day"; render(); return; }
+      if (action === "prev-week"){ weekAnchor = addDaysToDate(weekAnchor, -7); render(); return; }
+      if (action === "next-week"){ weekAnchor = addDaysToDate(weekAnchor, 7); render(); return; }
+      if (action === "this-week"){ weekAnchor = todayStr(); render(); return; }
+      if (action === "set-view"){ currentView = btn.getAttribute("data-view"); render(); return; }
+
+      if (action === "toggle-repeat-day"){
+        var rd = parseInt(btn.getAttribute("data-day"), 10);
+        var rdIdx = selectedRepeatDays.indexOf(rd);
+        if (rdIdx > -1) selectedRepeatDays.splice(rdIdx, 1); else selectedRepeatDays.push(rd);
+        renderRepeatDayPicker();
+        return;
+      }
+      if (action === "repeat-preset"){
+        var preset = btn.getAttribute("data-preset");
+        selectedRepeatDays = preset === "daily" ? [0,1,2,3,4,5,6] : [1,2,3,4,5];
+        renderRepeatDayPicker();
+        return;
+      }
+      if (action === "toggle-template-day"){
+        var ttid = btn.getAttribute("data-template-id");
+        var td = parseInt(btn.getAttribute("data-day"), 10);
+        var tpl = data.recurringTemplates[ttid];
+        if (tpl){
+          var tdIdx = tpl.daysOfWeek.indexOf(td);
+          if (tdIdx > -1) tpl.daysOfWeek.splice(tdIdx, 1); else tpl.daysOfWeek.push(td);
+          if (tpl.daysOfWeek.length === 0) showToast("No days selected. This will not generate tasks until you pick at least one.", "error");
+          saveData(); render();
+        }
+        return;
+      }
+      if (action === "toggle-template-active"){
+        var atid = btn.getAttribute("data-template-id");
+        var atpl = data.recurringTemplates[atid];
+        if (atpl){ atpl.active = !atpl.active; saveData(); render(); }
+        return;
+      }
+      if (action === "edit-template"){
+        var etid2 = btn.getAttribute("data-template-id");
+        var etpl = data.recurringTemplates[etid2];
+        if (!etpl) return;
+        var newTplText = prompt("Rename recurring task", etpl.text);
+        if (newTplText !== null){
+          var trimmedTpl = newTplText.trim();
+          if (trimmedTpl){ etpl.text = trimmedTpl; saveData(); render(); }
+        }
+        return;
+      }
+      if (action === "delete-template"){
+        var dtid2 = btn.getAttribute("data-template-id");
+        var dtpl = data.recurringTemplates[dtid2];
+        if (!dtpl) return;
+        if (confirm('Stop repeating "' + dtpl.text + '"? Tasks already created from it will stay as they are.')){
+          delete data.recurringTemplates[dtid2];
+          saveData(); render();
+        }
+        return;
+      }
+
+      if (action === "apply-label-color"){
+        var lid = btn.getAttribute("data-label-id");
+        var col = btn.getAttribute("data-color");
+        if (data.labels[lid]) data.labels[lid].color = col;
+        colorPickerOpenFor = null;
+        saveData(); render();
+        return;
+      }
+      if (action === "toggle-label-color"){
+        var tlid = btn.getAttribute("data-label-id");
+        colorPickerOpenFor = (colorPickerOpenFor === tlid) ? null : tlid;
+        render();
+        return;
+      }
+      if (action === "edit-label"){
+        var elid = btn.getAttribute("data-label-id");
+        var lbl = data.labels[elid];
+        if (!lbl) return;
+        var newName = prompt("Rename label", lbl.name);
+        if (newName !== null){
+          var trimmed = newName.trim();
+          if (trimmed){ lbl.name = trimmed; saveData(); render(); }
+        }
+        return;
+      }
+      if (action === "edit-tag"){
+        var etid = btn.getAttribute("data-tag-id");
+        var tg = data.tags[etid];
+        if (!tg) return;
+        var newTagName = prompt("Rename tag", tg.name);
+        if (newTagName !== null){
+          var trimmedT = newTagName.trim();
+          if (trimmedT){ tg.name = trimmedT; saveData(); render(); }
+        }
+        return;
+      }
+      if (action === "delete-label"){
+        var dlid = btn.getAttribute("data-label-id");
+        var dlbl = data.labels[dlid];
+        if (!dlbl) return;
+        var taskCnt = countTasksWithLabel(dlid);
+        var blockCnt = countBlocksWithLabel(dlid);
+        var parts = [];
+        if (taskCnt) parts.push(taskCnt + ' task' + (taskCnt === 1 ? '' : 's'));
+        if (blockCnt) parts.push(blockCnt + ' time block' + (blockCnt === 1 ? '' : 's'));
+        var msg = parts.length ? ('Delete "' + dlbl.name + '"? ' + parts.join(' and ') + ' will lose this label.') : ('Delete "' + dlbl.name + '"?');
+        if (confirm(msg)){
+          deleteLabel(dlid);
+          if (colorPickerOpenFor === dlid) colorPickerOpenFor = null;
+          saveData(); render();
+        }
+        return;
+      }
+      if (action === "delete-tag"){
+        var dtid = btn.getAttribute("data-tag-id");
+        var dtg = data.tags[dtid];
+        if (!dtg) return;
+        var cntT = countTasksWithTag(dtid);
+        var msgT = cntT ? ('Delete "' + dtg.name + '"? ' + cntT + ' task' + (cntT === 1 ? '' : 's') + ' will lose this tag.') : ('Delete "' + dtg.name + '"?');
+        if (confirm(msgT)){
+          deleteTag(dtid);
+          saveData(); render();
+        }
+        return;
+      }
+
+      if (action === "toggle-edit-task"){
+        var tetid = btn.getAttribute("data-task-id");
+        editingTaskId = (editingTaskId === tetid) ? null : tetid;
+        render();
+        return;
+      }
+      if (action === "cancel-edit-task"){
+        editingTaskId = null;
+        render();
+        return;
+      }
+      if (action === "save-edit-task"){
+        var setid = btn.getAttribute("data-task-id");
+        var task = data.tasks[setid];
+        if (!task) return;
+        var textInput = document.querySelector('[data-edit-text-for="' + setid + '"]');
+        var newText = textInput.value.trim();
+        if (!newText){ showToast("Task text cannot be empty.", "error"); textInput.focus(); return; }
+        var newPriority = document.querySelector('[data-edit-priority-for="' + setid + '"]').value;
+        var newLabelVal = document.querySelector('[data-edit-label-for="' + setid + '"]').value;
+        var newTagVal = document.querySelector('[data-edit-tag-for="' + setid + '"]').value;
+        if (task.blockId && newPriority !== task.priority && !canChangePriorityInBlock(setid, task.blockId, newPriority)){
+          var capLabel = newPriority === "high" ? "1 High priority task" : "3 Low priority tasks";
+          showToast("That block already has its limit of " + capLabel + ". Remove this task from the block first, or pick a different priority.", "error");
+          return;
+        }
+        task.text = newText;
+        task.priority = newPriority;
+        task.labelId = newLabelVal || null;
+        task.tagId = newTagVal || null;
+        editingTaskId = null;
+        saveData(); render();
+        return;
+      }
+      return;
+    }
+
+    if (e.target.classList && e.target.classList.contains("swatch")){
+      if (e.target.closest('#labelSwatchPickerBlock')){
+        selectedNewLabelColorBlock = e.target.getAttribute("data-color");
+        document.querySelectorAll('#labelSwatchPickerBlock .swatch').forEach(function(s){ s.classList.remove("selected"); });
+      } else if (e.target.closest('#labelSwatchPicker')){
+        selectedNewLabelColor = e.target.getAttribute("data-color");
+        document.querySelectorAll('#labelSwatchPicker .swatch').forEach(function(s){ s.classList.remove("selected"); });
+      }
+      e.target.classList.add("selected");
+    }
+  });
+
+  document.addEventListener("dragstart", function(e){
+    var chip = e.target.closest('[draggable="true"]');
+    if (!chip) return;
+    e.dataTransfer.setData("text/plain", chip.getAttribute("data-task-id"));
+    e.dataTransfer.effectAllowed = "move";
+  });
+  document.addEventListener("dragover", function(e){
+    var zone = e.target.closest("[data-dropzone]");
+    if (zone){ e.preventDefault(); zone.classList.add("drop-target-active"); }
+  });
+  document.addEventListener("dragleave", function(e){
+    var zone = e.target.closest("[data-dropzone]");
+    if (zone){ zone.classList.remove("drop-target-active"); }
+  });
+  document.addEventListener("drop", function(e){
+    var zone = e.target.closest("[data-dropzone]");
+    if (!zone) return;
+    e.preventDefault();
+    zone.classList.remove("drop-target-active");
+    var taskId = e.dataTransfer.getData("text/plain");
+    if (!taskId || !data.tasks[taskId]) return;
+    if (zone.getAttribute("data-dropzone") === "block"){
+      if (assignTaskToBlock(taskId, zone.getAttribute("data-block-id"))) { saveData(); render(); }
+    } else if (zone.getAttribute("data-dropzone") === "day"){
+      unassignTask(taskId);
+      data.tasks[taskId].date = zone.getAttribute("data-date");
+      saveData(); render();
+    }
+  });
+  document.addEventListener("dragend", function(){
+    document.querySelectorAll(".drop-target-active").forEach(function(el){ el.classList.remove("drop-target-active"); });
+  });
+
+  (function init(){
+    loadData();
+    loadSyncSettings();
+    document.getElementById('syncTokenInput').value = syncToken;
+    document.getElementById('syncGistIdInput').value = syncGistId;
+
+    function afterPull(){
+      runRollover();
+      ensureRecurringInstancesForToday();
+      saveData();
+      renderSwatchPicker();
+      renderSwatchPickerBlock();
+      render();
+      renderSyncStatus();
+      if (syncGistId && syncToken && !syncPollInterval){
+        syncPollInterval = setInterval(pullFromGist, 45000);
+      }
+    }
+
+    if (syncGistId && syncToken){
+      pullFromGist().then(afterPull);
+    } else {
+      afterPull();
+    }
+  })();
+})();
+</script>
+</body>
+</html>
