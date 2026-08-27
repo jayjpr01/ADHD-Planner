@@ -468,14 +468,14 @@
   var pushDebounceTimer = null;
   var syncPollInterval = null;
   var PANEL_COLLAPSE_KEY = "planner-panel-collapse";
-  var panelCollapse = {};
+  var panelCollapse = {sync:true, addtask:true, pending:true, backlog:true};
 
   function loadPanelCollapse(){
     if (!hasStorage) return;
     try{
       var raw = window.localStorage.getItem(PANEL_COLLAPSE_KEY);
-      if (raw) panelCollapse = JSON.parse(raw) || {};
-    }catch(e){ panelCollapse = {}; }
+      if (raw) panelCollapse = JSON.parse(raw) || panelCollapse;
+    }catch(e){}
   }
   function savePanelCollapse(){
     if (!hasStorage) return;
